@@ -1,0 +1,32 @@
+import pymongo
+import json
+client= pymongo.MongoClient("mongodb://127.0.0.1:27017")
+db=client["TeleDirect"]
+details= db["details"]
+
+#Create documents
+
+person1={"Name" : "Afees", "Phone" : 8907977493, "Place" : "Kochi"}
+person2={"Name" : "Ashraf", "Phone" : 123456789, "Place" : "Chennai"}
+person1_ID= details.insert_one(person1)
+print(person1_ID)
+person2_ID= details.insert_one(person2)
+print(person2_ID)
+
+#retreiving the data
+
+for docs in details.find():
+    print(docs)
+#updating the data
+
+old_data={"Name": "Afees"}
+new_data= {"$set" :{ "Name":"Afees Ashraf"}}
+details.update_one(old_data, new_data)
+
+for docs in details.find():
+    print(docs)
+#deleting the data
+
+details.delete_one({"Name":"Afees"})
+for docs in details.find():
+    print(docs)
