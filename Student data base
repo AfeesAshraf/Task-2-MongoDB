@@ -1,0 +1,131 @@
+import pymongo
+import json
+client= pymongo.MongoClient("mongodb://127.0.0.1:27017")
+db=client["students"]
+records=db["students_scores"]
+with open('students.json') as f:
+    data = [json.loads(line) for line in f]
+    records.insert_many(data)
+Exam_max=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$group":{"_id":"null","Max_Marks":{"$max":"$scores.score"}}}])
+Max_Marks=0
+for i in Exam_max:
+  Max_Marks=i["Max_Marks"]
+Max=records.find({"scores.score":Max_Marks},{"_id":1,"name":1})
+for i in Max:
+  Name=i['name']
+  print(f'The student who scored the maximum mark of {Max_Marks} in Exam is {Name}')
+Max_Quiz=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"quiz"}},{"$group":{"_id":"null","Max_Marks":{"$max":"$scores.score"}}}])
+Max_Marks=0
+for i in Max_Quiz:
+  Max_Marks=i["Max_Marks"]
+Max=records.find({"scores.score":Max_Marks},{"_id":1,"name":1})
+for i in Max:
+  Name=i['name']
+  print(f'The student who scored the maximum mark of {Max_Marks} in Quiz is {Name}')
+Max_HW=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"homework"}},{"$group":{"_id":"null","Max_Marks":{"$max":"$scores.score"}}}])
+Max_Marks=0
+for i in Max_HW:
+  Max_Marks=i["Max_Marks"]
+Max=records.find({"scores.score":Max_Marks},{"_id":1,"name":1})
+for i in Max:
+  Name=i['name']
+  print(f'The student who scored the maximum mark of {Max_Marks} in Homework is {Name}')
+
+Avg_Marks=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$group":{"_id":"null","Avg_Mark":{"$avg":"$scores.score"}}}])
+for i in Avg_Marks:
+  Avg_Mark=i["Avg_Mark"]
+Bel_Avg=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$match":{"scores.score":{"$lt":Avg_Mark}}}])
+for i in Bel_Avg:
+  print(i['name'])
+
+Result=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$match":{"scores.score":{"$lt":40}}}])
+for i in Result:
+  records.update_one({"_id":i["_id"]},{"$push":{"Result.Result_Exam":"Fail"}})
+
+Result=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$match":{"scores.score":{"$gte":40}}}])
+for i in Result:
+  records.update_one({"_id":i["_id"]},{"$push":{"Result.Result_Exam":"Pass"}})
+
+Result=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"quiz"}},{"$match":{"scores.score":{"$lt":40}}}])
+for i in Result:
+  records.update_one({"_id":i["_id"]},{"$push":{"Result.Result_Quiz":"Fail"}})
+
+Result=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"quiz"}},{"$match":{"scores.score":{"$gte":40}}}])
+for i in Result:
+  records.update_one({"_id":i["_id"]},{"$push":{"Result.Result_Quiz":"Pass"}})
+
+Result=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"homework"}},{"$match":{"scores.score":{"$lt":40}}}])
+for i in Result:
+  records.update_one({"_id":i["_id"]},{"$push":{"Result.Result_HW":"Fail"}})
+
+Result=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"homework"}},{"$match":{"scores.score":{"$gte":40}}}])
+for i in Result:
+  records.update_one({"_id":i["_id"]},{"$push":{"Result.Result_HW":"Pass"}})
+ 
+ Total_Avg=db.Total_Avg
+ 
+E_Total=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$group":{"_id":"null","Total_Exam":{"$sum":"$scores.score"}}}])
+for i in E_Total:
+  Total_Exam=i["Total_Exam"]
+Q_Total=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"quiz"}},{"$group":{"_id":"null","Total_Quiz":{"$sum":"$scores.score"}}}])
+for i in Q_Total:
+  Total_Quiz=i["Total_Quiz"]
+HW_Total=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"homework"}},{"$group":{"_id":"null","Total_HW":{"$sum":"$scores.score"}}}])
+for i in HW_Total:
+  Total_HW=i["Total_HW"]
+Total=[{'Type':"Exam","Total":Total_Exam},{'Type':"Quiz","Total":Total_Quiz},{'Type':"HW","Total":Total_HW}]
+Total_Avg.insert_many(Total)
+
+
+E_Avg=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$group":{"_id":"null","Avg_Exam":{"$avg":"$scores.score"}}}])
+for i in E_Avg:
+  Avg_Exam=i["Avg_Exam"]
+Q_Avg=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"quiz"}},{"$group":{"_id":"null","Avg_Quiz":{"$avg":"$scores.score"}}}])
+for i in Q_Avg:
+  Avg_Quiz=i["Avg_Quiz"]
+HW_Avg=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"homework"}},{"$group":{"_id":"null","Avg_HW":{"$avg":"$scores.score"}}}])
+for i in HW_Avg:
+  Avg_HW=i["Avg_HW"]
+Avg=[{'Type':"Exam","Avg":Avg_Exam},{'Type':"Quiz","Avg":Avg_Quiz},{'Type':"HW","Avg":Avg_HW}]
+Total_Avg.insert_many(Avg)
+
+BAvg_APass=db.BAvg_APass
+BAvg_Apas=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$match":{"scores.score":{"$gt":40,"$lt":Avg_Exam}}}])
+for i in BAvg_Apas:
+  Name=i['name']
+  Type=i['scores']['type']
+  BAvg_APass.insert_one({'Name':Name,'Type':Type})
+ 
+ 
+BAvg_Apas=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"quiz"}},{"$match":{"scores.score":{"$gt":40,"$lt":Avg_Quiz}}}])
+for i in BAvg_Apas:
+  Name=i['name']
+  Type=i['scores']['type']
+  BAvg_APass.insert_one({'Name':Name,'Type':Type})
+
+BAvg_Apas=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"homework"}},{"$match":{"scores.score":{"$gt":40,"$lt":Avg_HW}}}])
+for i in BAvg_Apas:
+  Name=i['name']
+  Type=i['scores']['type']
+  BAvg_APass.insert_one({'Name':Name,'Type':Type})
+
+All_Fail=db.All_Fail
+     
+
+Fail=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$unwind":"$Result"},{"$match":{"Result.Result_Exam":"Fail"}},
+                        {"$match":{"Result.Result_Quiz":"Fail"}},{"$match":{"Result.Result_HW":"Fail"}}])
+for i in Fail:
+  Name=i['name']
+  All_Fail.insert_one({'Name':Name})
+     
+
+### Create a new collection which consists of students who scored above pass mark in all the categories.
+All_Pass=db.All_Pass
+     
+
+Pass=records.aggregate([{"$unwind":"$scores"},{"$match":{"scores.type":"exam"}},{"$unwind":"$Result"},{"$match":{"Result.Result_Exam":"Pass"}},
+                        {"$match":{"Result.Result_Quiz":"Pass"}},{"$match":{"Result.Result_HW":"Pass"}}])
+for i in Pass:
+  Name=i['name']
+  All_Pass.insert_one({'Name':Name})
+     
